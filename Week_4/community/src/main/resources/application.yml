@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: community
+
+  datasource:
+    url: "jdbc:mysql://localhost:3306/community?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true&useSSL=false"
+    username: root
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-exp-seconds: 7200
+
+file:
+  upload-dir: uploads/images

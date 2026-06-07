@@ -1,8 +1,12 @@
 package com.community.community.service;
 
 import com.community.community.dto.*;
+import com.community.community.entity.Comment;
+import com.community.community.entity.Post;
+import com.community.community.entity.User;
 import com.community.community.repository.CommentRepository;
 import com.community.community.repository.PostRepository;
+import com.community.community.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,10 +17,16 @@ public class CommentService {
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final UserRepository userRepository;
 
-    public CommentService(PostRepository postRepository, CommentRepository commentRepository) {
+    public CommentService(
+            PostRepository postRepository,
+            CommentRepository commentRepository,
+            UserRepository userRepository
+    ) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
+        this.userRepository = userRepository;
     }
 
     // 댓글 저장과 posts.comment_count 증가 중 하나만 반영되는 것을 막기 위해 트랜잭션으로 묶는다.
@@ -26,26 +36,22 @@ public class CommentService {
             int currentUserId,
             CommentCreateRequestDTO request
     ) {
-        if (postRepository.findById(postId) == null) {
-            throw new IllegalStateException("post_not_found");
-        }
-
         if (request.getContent() == null || request.getContent().isBlank()) {
             throw new IllegalArgumentException("invalid_create_comment_request");
         }
 
-        int commentId = commentRepository.save(
-                postId,
-                currentUserId,
-                request.getContent()
-        );
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalStateException("post_not_found"));
 
-        postRepository.increaseCommentCount(postId);
+        User writer = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new SecurityException("unauthorized"));
 
-        CommentCreateResponseDTO commentCreateResponseDTO = new CommentCreateResponseDTO();
-        commentCreateResponseDTO.setCommentId(commentId);
+        Comment comment = new Comment(post, writer, request.getContent());
+        Comment savedComment = commentRepository.save(comment);
 
-        return commentCreateResponseDTO;
+        post.increaseCommentCount();
+
+        return new CommentCreateResponseDTO(savedComment.getCommentId());
     }
 
     public GetCommentsResponseDTO getComments(
@@ -68,18 +74,24 @@ public class CommentService {
             throw new IllegalArgumentException("invalid_comments_request");
         }
 
-        if (postRepository.findById(postId) == null) {
+        /*
+         * 댓글 목록은 특정 게시글에 속한 댓글을 조회하는 기능이므로,
+         * 먼저 게시글이 존재하는지 확인한다.
+         * 게시글이 없다면 댓글 목록도 조회할 수 없으므로 post_not_found를 반환한다.
+         */
+        if (!postRepository.existsById(postId)) {
             throw new IllegalStateException("post_not_found");
         }
 
-        // 화면에 보여줄 개수보다 하나 더 조회하여 다음 페이지 존재 여부를 판단한다.
-        List<CommentListItemResponseDTO> comments =
-                commentRepository.findCommentsByCursor(
-                        postId,
-                        cursor,
-                        size + 1,
-                        currentUserId
-                );
+        /*
+         * 다음 페이지 존재 여부를 확인하기 위해 요청 size보다 1개 더 조회한다.
+         */
+        List<CommentListItemResponseDTO> comments = commentRepository.findCommentListByCursor(
+                postId,
+                cursor,
+                size + 1,
+                currentUserId
+        );
 
         boolean hasNext = comments.size() > size;
 
@@ -89,22 +101,16 @@ public class CommentService {
 
         Integer nextCursor = null;
 
-        // 다음 조회는 comment_id < cursor 조건을 사용하므로 마지막으로 응답한 ID 자체를 전달한다.
         if (hasNext && !comments.isEmpty()) {
             nextCursor = comments.get(comments.size() - 1).getCommentId();
         }
 
-        PaginationResponseDTO pagination = new PaginationResponseDTO();
-        pagination.setNextCursor(nextCursor);
-        pagination.setHasNext(hasNext);
+        PaginationResponseDTO pagination = new PaginationResponseDTO(nextCursor, hasNext);
 
-        GetCommentsResponseDTO response = new GetCommentsResponseDTO();
-        response.setComments(comments);
-        response.setPagination(pagination);
-
-        return response;
+        return new GetCommentsResponseDTO(comments, pagination);
     }
 
+    @Transactional
     public CommentUpdateResponseDTO updateComment(
             int commentId,
             int currentUserId,
@@ -115,52 +121,31 @@ public class CommentService {
             throw new IllegalArgumentException("invalid_update_comment_request");
         }
 
-        Integer authorId = commentRepository.findAuthorIdByCommentId(commentId);
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalStateException("comment_not_found"));
 
-        if (authorId == null) {
-            throw new IllegalStateException("comment_not_found");
-        }
-
-        if (authorId != currentUserId) {
+        if (!comment.isWrittenBy(currentUserId)) {
             throw new SecurityException("forbidden");
         }
 
-        commentRepository.updateContent(commentId, request.getContent());
+        comment.updateContent(request.getContent());
 
-        CommentUpdateResponseDTO response = new CommentUpdateResponseDTO();
-        response.setCommentId(commentId);
-        response.setContent(request.getContent());
-
-        return response;
+        return new CommentUpdateResponseDTO(commentId, request.getContent());
     }
 
     // 댓글 삭제와 comment_count 감소 중 하나만 반영되는 것을 막기 위해 트랜잭션으로 묶는다.
     @Transactional
     public void deleteComment(int commentId, int currentUserId) {
-        Integer authorId = commentRepository.findAuthorIdByCommentId(commentId);
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalStateException("comment_not_found"));
 
-        if (authorId == null) {
-            throw new IllegalStateException("comment_not_found");
-        }
-
-        if (authorId != currentUserId) {
+        if (!comment.isWrittenBy(currentUserId)) {
             throw new SecurityException("forbidden");
         }
 
-        Integer postId = commentRepository.findPostIdByCommentId(commentId);
+        Post post = comment.getPost();
 
-        if (postId == null) {
-            throw new IllegalStateException("comment_not_found");
-        }
-
-        int deletedCount = commentRepository.deleteById(commentId);
-
-        if (deletedCount == 0) {
-            throw new IllegalStateException("comment_not_found");
-        }
-
-        postRepository.decreaseCommentCount(postId);
+        commentRepository.delete(comment);
+        post.decreaseCommentCount();
     }
-
-
 }

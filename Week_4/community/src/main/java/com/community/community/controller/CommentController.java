@@ -22,13 +22,13 @@ public class CommentController {
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<?> createComment(
             @PathVariable int postId,
-            // Header 누락도 인증 실패로 처리하기 위해 required = false로 설정한다.
-            // 기본값(true)을 사용하면 Controller 진입 전에 Spring이 400을 반환할 수 있다.
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            // accessToken 쿠키가 없어도 Controller에서 직접 401 응답을 만들기 위해 required = false로 받는다.
+            // required = true이면 쿠키 누락 시 Spring이 먼저 400을 반환할 수 있다.
+            @CookieValue(value = "accessToken", required = false) String accessToken,
             @RequestBody CommentCreateRequestDTO request
     ) {
         try {
-            int currentUserId = authService.getCurrentUserId(authorization);
+            int currentUserId = authService.getCurrentUserId(accessToken);
 
             CommentCreateResponseDTO data = commentService.createComment(
                     postId,
@@ -46,7 +46,7 @@ public class CommentController {
                     new ApiResponse<>(e.getMessage(), null)
             );
 
-            // session_id가 없거나 만료되어 인증에 실패한 경우: 401
+            // accessToken이 없거나 만료/변조되어 인증에 실패한 경우: 401
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     new ApiResponse<>("unauthorized", null)
@@ -66,19 +66,18 @@ public class CommentController {
         }
     }
 
-    // Authorization 헤더가 없어도 Controller 내부에서 직접 인증 실패를 처리할 수 있도록
-    // required = false로 설정한다.
-    // 헤더가 없으면 authorization에 null이 전달되고,
+    // accessToken 쿠키가 없어도 Controller 내부에서 직접 인증 실패를 처리할 수 있도록
+    // required = false로 설정한다. 쿠키가 없으면 accessToken에 null이 전달되고,
     // AuthService에서 이를 확인하여 401 Unauthorized를 반환한다.
     @GetMapping("/posts/{postId}/comments")
     public ResponseEntity<?> getComments(
             @PathVariable int postId,
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @CookieValue(value = "accessToken", required = false) String accessToken,
             @RequestParam(defaultValue = "0") String cursor,
             @RequestParam(defaultValue = "10") String size
     ) {
         try {
-            int currentUserId = authService.getCurrentUserId(authorization);
+            int currentUserId = authService.getCurrentUserId(accessToken);
 
             GetCommentsResponseDTO data = commentService.getComments(
                     postId,
@@ -97,7 +96,7 @@ public class CommentController {
                     new ApiResponse<>(e.getMessage(), null)
             );
 
-            // session_id가 없거나 만료되어 인증에 실패한 경우: 401
+            // accessToken이 없거나 만료/변조되어 인증에 실패한 경우: 401
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     new ApiResponse<>("unauthorized", null)
@@ -121,13 +120,12 @@ public class CommentController {
     public ResponseEntity<?> updateComment(
             @PathVariable int commentId,
 
-            // Header 누락 시 Spring의 기본 400 응답 대신 직접 401 응답을 반환하기 위해 false로 설정한다.
-            @RequestHeader(value = "Authorization", required = false) String authorization,
-
+            // accessToken 쿠키가 없어도 Spring의 기본 400 응답 대신 직접 401 응답을 반환하기 위해 false로 받는다.
+            @CookieValue(value = "accessToken", required = false) String accessToken,
             @RequestBody CommentUpdateRequestDTO request
     ) {
         try {
-            int currentUserId = authService.getCurrentUserId(authorization);
+            int currentUserId = authService.getCurrentUserId(accessToken);
 
             CommentUpdateResponseDTO data = commentService.updateComment(
                     commentId,
@@ -145,7 +143,7 @@ public class CommentController {
                     new ApiResponse<>(e.getMessage(), null)
             );
 
-            // session_id가 없거나 만료된 경우: 401
+            // accessToken이 없거나 만료/변조되어 인증에 실패한 경우: 401
             // 로그인했지만 댓글 작성자가 아닌 경우: 403
         } catch (SecurityException e) {
             if ("forbidden".equals(e.getMessage())) {
@@ -176,17 +174,17 @@ public class CommentController {
     public ResponseEntity<?> deleteComment(
             @PathVariable int commentId,
 
-            // Header 누락 시 Spring의 기본 400 응답 대신 직접 401 응답을 반환하기 위해 false로 설정한다.
-            @RequestHeader(value = "Authorization", required = false) String authorization
+            // accessToken 쿠키가 없어도 Spring의 기본 400 응답 대신 직접 401 응답을 반환하기 위해 false로 받는다.
+            @CookieValue(value = "accessToken", required = false) String accessToken
     ) {
         try {
-            int currentUserId = authService.getCurrentUserId(authorization);
+            int currentUserId = authService.getCurrentUserId(accessToken);
 
             commentService.deleteComment(commentId, currentUserId);
 
             return ResponseEntity.noContent().build();
 
-            // session_id가 없거나 만료된 경우: 401
+            // accessToken이 없거나 만료/변조되어 인증에 실패한 경우: 401
             // 로그인했지만 댓글 작성자가 아닌 경우: 403
         } catch (SecurityException e) {
             if ("forbidden".equals(e.getMessage())) {
