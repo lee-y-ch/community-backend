@@ -7,6 +7,7 @@ import com.community.community.dto.LoginResultDTO;
 import com.community.community.dto.UserResponseDTO;
 import com.community.community.entity.User;
 import com.community.community.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +17,13 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthService(UserRepository userRepository, JwtProvider jwtProvider) {
+
+    public AuthService(UserRepository userRepository, JwtProvider jwtProvider, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // login 메서드
@@ -38,7 +42,7 @@ public class AuthService {
                 .orElseThrow(() -> new SecurityException("invalid_email_or_password"));
 
         // 틀린 email or password (401)
-        if (!user.getPassword().equals(password)) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new SecurityException("invalid_email_or_password");
         }
 

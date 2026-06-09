@@ -3,6 +3,7 @@ package com.community.community.service;
 import com.community.community.dto.*;
 import com.community.community.entity.User;
 import com.community.community.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,9 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // 회원가입 처리 로직
@@ -45,8 +49,11 @@ public class UserService {
             throw new IllegalStateException("nickname_already_exists");
         }
 
+        // 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(password);
+
         // 저장 로직
-        User user = new User(email, password, nickname, profileImage);
+        User user = new User(email, encodedPassword, nickname, profileImage);
         userRepository.save(user);
     }
 
@@ -126,7 +133,7 @@ public class UserService {
             throw new IllegalArgumentException("invalid_update_password_request");
         }
 
-        user.updatePassword(request.getPassword());
+        user.updatePassword(passwordEncoder.encode(request.getPassword()));
 
         return new PasswordUpdateResponseDTO(pathUserId);
     }
