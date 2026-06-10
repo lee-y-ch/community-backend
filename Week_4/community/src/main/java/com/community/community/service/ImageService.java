@@ -63,8 +63,8 @@ public class ImageService {
                 Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            // 현재는 로컬 개발 환경 기준 URL을 반환하고, 추후 S3/CDN으로 저장소를 바꿀 수 있다.
-            String imageUrl = "http://localhost:8080/images/" + type + "/" + storedFilename;
+            // 로컬 호스트를 포함하지 않는 상대 경로를 저장하도록 수정.
+            String imageUrl = "/images/" + type + "/" + storedFilename;
 
             return new ImageUploadResponseDTO(imageUrl);
 
