@@ -6,6 +6,8 @@ import com.community.community.dto.LoginResponseDTO;
 import com.community.community.dto.LoginResultDTO;
 import com.community.community.dto.UserResponseDTO;
 import com.community.community.entity.User;
+import com.community.community.exception.BusinessException;
+import com.community.community.exception.ErrorCode;
 import com.community.community.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,15 +37,15 @@ public class AuthService {
         // 올바르지 않은 로그인 요청 (400)
         if (email == null || email.isBlank()
                 || password == null || password.isBlank()) {
-            throw new IllegalArgumentException("invalid_login_request");
+            throw new BusinessException(ErrorCode.INVALID_LOGIN_REQUEST);
         }
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SecurityException("invalid_email_or_password"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_EMAIL_OR_PASSWORD));
 
         // 틀린 email or password (401)
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new SecurityException("invalid_email_or_password");
+            throw new BusinessException(ErrorCode.INVALID_EMAIL_OR_PASSWORD);
         }
 
         // 서버에 세션을 저장하지 않고, 사용자 식별 정보를 담은 JWT를 발급한다.
@@ -69,11 +71,11 @@ public class AuthService {
     // HttpOnly Cookie로 전달된 JWT를 검증하고, subject에 저장된 userId를 현재 사용자로 사용한다.
     public int getCurrentUserId(String accessToken) {
         if (accessToken == null || accessToken.isBlank()) {
-            throw new SecurityException("unauthorized");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         if (!jwtProvider.validateAccessToken(accessToken)) {
-            throw new SecurityException("unauthorized");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         return jwtProvider.getUserId(accessToken);

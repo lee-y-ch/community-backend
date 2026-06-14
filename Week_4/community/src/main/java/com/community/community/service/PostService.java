@@ -5,6 +5,8 @@ import com.community.community.entity.Post;
 import com.community.community.entity.PostLike;
 import com.community.community.entity.PostLikeId;
 import com.community.community.entity.User;
+import com.community.community.exception.BusinessException;
+import com.community.community.exception.ErrorCode;
 import com.community.community.repository.PostLikeRepository;
 import com.community.community.repository.PostRepository;
 import com.community.community.repository.UserRepository;
@@ -37,15 +39,15 @@ public class PostService {
     public CreatePostResponseDTO createPost(int currentUserId, PostCreateRequestDTO request) {
         if (request.getTitle() == null || request.getTitle().isBlank()
                 || request.getContent() == null || request.getContent().isBlank()) {
-            throw new IllegalArgumentException("invalid_create_post_request");
+            throw new BusinessException(ErrorCode.INVALID_CREATE_POST_REQUEST);
         }
 
         if (request.getTitle().length() > 26) {
-            throw new IllegalArgumentException("invalid_create_post_request");
+            throw new BusinessException(ErrorCode.INVALID_CREATE_POST_REQUEST);
         }
 
         User author = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new SecurityException("unauthorized"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
         Post post = new Post(
                 author,
@@ -66,8 +68,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public GetPostResponseDTO getPost(int postId, int currentUserId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalStateException("post_not_found"));
-
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
         User author = post.getAuthor();
 
         PostAuthorResponseDTO authorResponse = new PostAuthorResponseDTO(
@@ -107,11 +108,11 @@ public class PostService {
             cursor = Integer.parseInt(cursorValue);
             size = Integer.parseInt(sizeValue);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("invalid_posts_request");
+            throw new BusinessException(ErrorCode.INVALID_POSTS_REQUEST);
         }
 
         if (cursor < 0 || size <= 0) {
-            throw new IllegalArgumentException("invalid_posts_request");
+            throw new BusinessException(ErrorCode.INVALID_POSTS_REQUEST);
         }
 
         /*
@@ -145,18 +146,18 @@ public class PostService {
     public PostUpdateResponseDTO updatePost(int postId, int currentUserId, PostUpdateRequestDTO request) {
         if (request.getTitle() == null || request.getTitle().isBlank()
                 || request.getContent() == null || request.getContent().isBlank()) {
-            throw new IllegalArgumentException("invalid_update_post_request");
+            throw new BusinessException(ErrorCode.INVALID_UPDATE_POST_REQUEST);
         }
 
         if (request.getTitle().length() > 26) {
-            throw new IllegalArgumentException("invalid_update_post_request");
+            throw new BusinessException(ErrorCode.INVALID_UPDATE_POST_REQUEST);
         }
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalStateException("post_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         if (!post.getAuthor().getUserId().equals(currentUserId)) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         // JPA 변경 감지를 사용하기 위해 영속 상태의 Post 엔티티 값만 변경한다.
@@ -171,10 +172,10 @@ public class PostService {
 
     public void deletePost(int postId, int currentUserId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalStateException("post_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         if (!post.getAuthor().getUserId().equals(currentUserId)) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         postRepository.delete(post);
@@ -184,10 +185,10 @@ public class PostService {
     @Transactional
     public PostLikeResponseDTO toggleLike(int postId, int currentUserId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalStateException("post_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         User user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new SecurityException("unauthorized"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
         PostLikeId postLikeId = new PostLikeId(postId, currentUserId);
 
@@ -195,7 +196,7 @@ public class PostService {
 
         if (postLikeRepository.existsById(postLikeId)) {
             PostLike postLike = postLikeRepository.findById(postLikeId)
-                    .orElseThrow(() -> new IllegalStateException("post_like_not_found"));
+                    .orElseThrow(() -> new BusinessException(ErrorCode.POST_LIKE_NOT_FOUND));
 
             postLikeRepository.delete(postLike);
             post.decreaseLikeCount();

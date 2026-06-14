@@ -1,6 +1,8 @@
 package com.community.community.service;
 
 import com.community.community.dto.ImageUploadResponseDTO;
+import com.community.community.exception.BusinessException;
+import com.community.community.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,21 +33,21 @@ public class ImageService {
 
     public ImageUploadResponseDTO uploadImage(MultipartFile image, String type) {
         if (image == null || image.isEmpty()) {
-            throw new IllegalArgumentException("invalid_image_upload_request");
+            throw new BusinessException(ErrorCode.INVALID_IMAGE_UPLOAD_REQUEST);
         }
 
         if (type == null || type.isBlank()) {
-            throw new IllegalArgumentException("invalid_image_upload_request");
+            throw new BusinessException(ErrorCode.INVALID_IMAGE_UPLOAD_REQUEST);
         }
 
         if (!type.equals("profile") && !type.equals("post")) {
-            throw new IllegalArgumentException("invalid_image_upload_request");
+            throw new BusinessException(ErrorCode.INVALID_IMAGE_UPLOAD_REQUEST);
         }
 
         String contentType = image.getContentType();
 
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new IllegalStateException("unsupported_image_type");
+            throw new BusinessException(ErrorCode.UNSUPPORTED_IMAGE_TYPE);
         }
 
         try {
@@ -69,7 +71,7 @@ public class ImageService {
             return new ImageUploadResponseDTO(imageUrl);
 
         } catch (IOException e) {
-            throw new RuntimeException("image_upload_failed");
+            throw new BusinessException(ErrorCode.IMAGE_UPLOAD_FAILED);
         }
     }
 

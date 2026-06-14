@@ -4,6 +4,8 @@ import com.community.community.dto.*;
 import com.community.community.entity.Comment;
 import com.community.community.entity.Post;
 import com.community.community.entity.User;
+import com.community.community.exception.BusinessException;
+import com.community.community.exception.ErrorCode;
 import com.community.community.repository.CommentRepository;
 import com.community.community.repository.PostRepository;
 import com.community.community.repository.UserRepository;
@@ -37,14 +39,14 @@ public class CommentService {
             CommentCreateRequestDTO request
     ) {
         if (request.getContent() == null || request.getContent().isBlank()) {
-            throw new IllegalArgumentException("invalid_create_comment_request");
+            throw new BusinessException(ErrorCode.INVALID_CREATE_COMMENT_REQUEST);
         }
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalStateException("post_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         User writer = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new SecurityException("unauthorized"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
         Comment comment = new Comment(post, writer, request.getContent());
         Comment savedComment = commentRepository.save(comment);
@@ -67,11 +69,11 @@ public class CommentService {
             cursor = Integer.parseInt(cursorValue);
             size = Integer.parseInt(sizeValue);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("invalid_comments_request");
+            throw new BusinessException(ErrorCode.INVALID_COMMENTS_REQUEST);
         }
 
         if (cursor < 0 || size <= 0) {
-            throw new IllegalArgumentException("invalid_comments_request");
+            throw new BusinessException(ErrorCode.INVALID_COMMENTS_REQUEST);
         }
 
         /*
@@ -80,7 +82,7 @@ public class CommentService {
          * 게시글이 없다면 댓글 목록도 조회할 수 없으므로 post_not_found를 반환한다.
          */
         if (!postRepository.existsById(postId)) {
-            throw new IllegalStateException("post_not_found");
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
         /*
@@ -118,14 +120,14 @@ public class CommentService {
     ) {
         // 댓글 내용은 필수이므로 공백만 입력한 경우도 저장하지 않는다.
         if (request.getContent() == null || request.getContent().isBlank()) {
-            throw new IllegalArgumentException("invalid_update_comment_request");
+            throw new BusinessException(ErrorCode.INVALID_UPDATE_COMMENT_REQUEST);
         }
 
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalStateException("comment_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.isWrittenBy(currentUserId)) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         comment.updateContent(request.getContent());
@@ -137,10 +139,10 @@ public class CommentService {
     @Transactional
     public void deleteComment(int commentId, int currentUserId) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalStateException("comment_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.isWrittenBy(currentUserId)) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         Post post = comment.getPost();
