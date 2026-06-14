@@ -1,9 +1,9 @@
 package com.community.community.controller;
 
 import com.community.community.ApiResponse;
+import com.community.community.auth.CurrentUserId;
 import com.community.community.dto.*;
 import com.community.community.entity.User;
-import com.community.community.service.AuthService;
 import com.community.community.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,11 +13,9 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    private final AuthService authService;
 
-    public UserController(UserService userService, AuthService authService) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.authService = authService;
     }
 
     // ResponseEntity: spring에서 HTTP 응답을 만들어 반환할 수 있게 해주는 객체
@@ -37,11 +35,8 @@ public class UserController {
     @GetMapping("/users/{userId}")
     public ResponseEntity<?> getUser(
         @PathVariable int userId,
-        // accessToken 쿠키가 없어도 Controller에서 직접 401 응답을 만들기 위해 required = false로 받는다.
-            // required = true이면 쿠키 누락 시 Spring이 먼저 400을 반환할 수 있다.
-        @CookieValue(value = "accessToken", required = false) String accessToken
+        @CurrentUserId int currentUserId
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
         User user = userService.getUser(userId, currentUserId);
 
         // api 명세에 있는 응답 (password를 제외한)을 맞추기 위해 password가 없는 응답 형태를 DTO로 만들어 반환
@@ -62,11 +57,9 @@ public class UserController {
     @PatchMapping("/users/{userId}")
     public ResponseEntity<?> updateUser(
             @PathVariable int userId,
-            @CookieValue(value = "accessToken", required = false) String accessToken,
+            @CurrentUserId int currentUserId,
             @RequestBody UserUpdateRequestDTO request
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         GetUserResponseDTO data = userService.updateUser(userId, currentUserId, request);
 
         return ResponseEntity.ok(
@@ -77,11 +70,9 @@ public class UserController {
     @PatchMapping("/users/{userId}/password")
     public ResponseEntity<ApiResponse<PasswordUpdateResponseDTO>> updatePassword(
             @PathVariable int userId,
-            @CookieValue(value = "accessToken", required = false) String accessToken,
+            @CurrentUserId int currentUserId,
             @RequestBody PasswordUpdateRequestDTO request
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         PasswordUpdateResponseDTO data = userService.updatePassword(
                 userId,
                 currentUserId,
@@ -96,10 +87,8 @@ public class UserController {
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<?> deleteUser(
             @PathVariable int userId,
-            @CookieValue(value = "accessToken", required = false) String accessToken
+            @CurrentUserId int currentUserId
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         userService.deleteUser(userId, currentUserId);
 
         return ResponseEntity.noContent().build();

@@ -1,8 +1,8 @@
 package com.community.community.controller;
 
 import com.community.community.ApiResponse;
+import com.community.community.auth.CurrentUserId;
 import com.community.community.dto.*;
-import com.community.community.service.AuthService;
 import com.community.community.service.CommentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,24 +11,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 public class CommentController {
 
-    private final AuthService authService;
     private final CommentService commentService;
 
-    public CommentController(AuthService authService, CommentService commentService) {
-        this.authService = authService;
+    public CommentController(CommentService commentService) {
         this.commentService = commentService;
     }
 
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<?> createComment(
             @PathVariable int postId,
-            // accessToken 쿠키가 없어도 Controller에서 직접 401 응답을 만들기 위해 required = false로 받는다.
-            // required = true이면 쿠키 누락 시 Spring이 먼저 400을 반환할 수 있다.
-            @CookieValue(value = "accessToken", required = false) String accessToken,
+            @CurrentUserId int currentUserId,
             @RequestBody CommentCreateRequestDTO request
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         CommentCreateResponseDTO data = commentService.createComment(
                 postId,
                 currentUserId,
@@ -46,12 +40,10 @@ public class CommentController {
     @GetMapping("/posts/{postId}/comments")
     public ResponseEntity<?> getComments(
             @PathVariable int postId,
-            @CookieValue(value = "accessToken", required = false) String accessToken,
+            @CurrentUserId int currentUserId,
             @RequestParam(defaultValue = "0") String cursor,
             @RequestParam(defaultValue = "10") String size
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         GetCommentsResponseDTO data = commentService.getComments(
                 postId,
                 cursor,
@@ -67,13 +59,9 @@ public class CommentController {
     @PutMapping("/comments/{commentId}")
     public ResponseEntity<?> updateComment(
             @PathVariable int commentId,
-
-            // accessToken 쿠키가 없어도 Spring의 기본 400 응답 대신 직접 401 응답을 반환하기 위해 false로 받는다.
-            @CookieValue(value = "accessToken", required = false) String accessToken,
+            @CurrentUserId int currentUserId,
             @RequestBody CommentUpdateRequestDTO request
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         CommentUpdateResponseDTO data = commentService.updateComment(
                 commentId,
                 currentUserId,
@@ -88,12 +76,8 @@ public class CommentController {
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<?> deleteComment(
             @PathVariable int commentId,
-
-            // accessToken 쿠키가 없어도 Spring의 기본 400 응답 대신 직접 401 응답을 반환하기 위해 false로 받는다.
-            @CookieValue(value = "accessToken", required = false) String accessToken
+            @CurrentUserId int currentUserId
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         commentService.deleteComment(commentId, currentUserId);
 
         return ResponseEntity.noContent().build();

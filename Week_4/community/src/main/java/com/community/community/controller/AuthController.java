@@ -1,6 +1,7 @@
 package com.community.community.controller;
 
 import com.community.community.ApiResponse;
+import com.community.community.auth.CurrentUserId;
 import com.community.community.dto.LoginRequestDTO;
 import com.community.community.dto.LoginResultDTO;
 import com.community.community.dto.UserResponseDTO;
@@ -43,13 +44,8 @@ public class AuthController {
 
     @DeleteMapping("/auth")
     public ResponseEntity<?> logout(
-            // accessToken 쿠키가 없어도 Controller에서 직접 401 응답을 만들기 위해 required = false로 받는다.
-            // required = true이면 쿠키 누락 시 Spring이 먼저 400을 반환할 수 있다.
-            @CookieValue(value = "accessToken", required = false) String accessToken
+            @CurrentUserId int currentUserId
     ) {
-
-        authService.logout(accessToken);
-
         // 서버에 저장된 세션이 없으므로, 로그아웃은 브라우저의 accessToken 쿠키를 만료시키는 방식으로 처리한다.
         ResponseCookie expiredCookie = ResponseCookie.from("accessToken", "")
                 .httpOnly(true)
@@ -68,10 +64,8 @@ public class AuthController {
     // 프론트 코드의 /auth/check api 호출에 답하기 위해 생성
     @GetMapping("/auth/check")
     public ResponseEntity<?> checkAuth(
-            @CookieValue(value = "accessToken", required = false) String accessToken
+            @CurrentUserId int currentUserId
     ) {
-        int currentUserId = authService.getCurrentUserId(accessToken);
-
         // /auth/check는 URL에 조회 대상 userId가 없다.
         // 현재 로그인 사용자를 확인하는 API이므로 조회 대상과 인증 사용자를 같은 값으로 넘긴다.
         User user = userService.getUser(currentUserId, currentUserId);
