@@ -30,16 +30,6 @@ public class UserService {
 
         // 각 에러 처리에 대한 응답 코드 매핑은 UserController에서 진행
 
-        // 필수값 검사 (400)
-        if (email == null || email.isBlank()
-                || password == null || password.isBlank()
-                || nickname == null || nickname.isBlank()
-                || profileImage == null || profileImage.isBlank()) {
-
-            // IllegalArgumentException: 잘못된 인자에 대한 에러 처리
-            throw new BusinessException(ErrorCode.INVALID_REGISTER_REQUEST);
-        }
-
         // email 중복 검증 (409)
         if (userRepository.existsByEmail(email)) {
             // IllegalStateException: 형식은 올바르나 상태가 올바르지 않은 상황에 대한 에러 처리
@@ -85,14 +75,6 @@ public class UserService {
         User user = userRepository.findById(pathUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (request.getNickname() == null || request.getNickname().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_USER_REQUEST);
-        }
-
-        if (request.getNickname().length() > 10) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_USER_REQUEST);
-        }
-
         if (userRepository.existsByNicknameAndUserIdNot(request.getNickname(), pathUserId)) {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
         }
@@ -122,16 +104,7 @@ public class UserService {
         User user = userRepository.findById(pathUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (request.getPassword() == null || request.getPassword().isBlank()
-                || request.getPasswordConfirm() == null || request.getPasswordConfirm().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_PASSWORD_REQUEST);
-        }
-
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_PASSWORD_REQUEST);
-        }
-
-        if (!isValidPassword(request.getPassword())) {
             throw new BusinessException(ErrorCode.INVALID_UPDATE_PASSWORD_REQUEST);
         }
 

@@ -37,14 +37,6 @@ public class PostService {
     // 인증 후에 진행할 수 있는 메서드는 매개변수로 현재 user_id까지 받아야 함.
     @Transactional
     public CreatePostResponseDTO createPost(int currentUserId, PostCreateRequestDTO request) {
-        if (request.getTitle() == null || request.getTitle().isBlank()
-                || request.getContent() == null || request.getContent().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_CREATE_POST_REQUEST);
-        }
-
-        if (request.getTitle().length() > 26) {
-            throw new BusinessException(ErrorCode.INVALID_CREATE_POST_REQUEST);
-        }
 
         User author = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
@@ -144,14 +136,6 @@ public class PostService {
 
     @Transactional
     public PostUpdateResponseDTO updatePost(int postId, int currentUserId, PostUpdateRequestDTO request) {
-        if (request.getTitle() == null || request.getTitle().isBlank()
-                || request.getContent() == null || request.getContent().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_POST_REQUEST);
-        }
-
-        if (request.getTitle().length() > 26) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_POST_REQUEST);
-        }
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));

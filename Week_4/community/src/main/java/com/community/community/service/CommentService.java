@@ -38,10 +38,6 @@ public class CommentService {
             int currentUserId,
             CommentCreateRequestDTO request
     ) {
-        if (request.getContent() == null || request.getContent().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_CREATE_COMMENT_REQUEST);
-        }
-
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
@@ -118,11 +114,6 @@ public class CommentService {
             int currentUserId,
             CommentUpdateRequestDTO request
     ) {
-        // 댓글 내용은 필수이므로 공백만 입력한 경우도 저장하지 않는다.
-        if (request.getContent() == null || request.getContent().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_UPDATE_COMMENT_REQUEST);
-        }
-
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 

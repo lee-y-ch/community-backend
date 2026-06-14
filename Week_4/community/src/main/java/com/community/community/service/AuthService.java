@@ -34,12 +34,6 @@ public class AuthService {
         String email = loginRequestDTO.getEmail();
         String password = loginRequestDTO.getPassword();
 
-        // 올바르지 않은 로그인 요청 (400)
-        if (email == null || email.isBlank()
-                || password == null || password.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_LOGIN_REQUEST);
-        }
-
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_EMAIL_OR_PASSWORD));
 

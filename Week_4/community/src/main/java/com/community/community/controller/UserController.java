@@ -5,6 +5,7 @@ import com.community.community.auth.CurrentUserId;
 import com.community.community.dto.*;
 import com.community.community.entity.User;
 import com.community.community.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class UserController {
 
     // ResponseEntity: spring에서 HTTP 응답을 만들어 반환할 수 있게 해주는 객체
     @PostMapping("/users")
-    public ResponseEntity<?> register(@RequestBody RegisterRequestDTO request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDTO request) {
 
         // UserService 호출해서 서비스 로직에서 요청 body 데이터 활용할 수 있도록 request 넘기기
         userService.register(request);
@@ -58,7 +59,7 @@ public class UserController {
     public ResponseEntity<?> updateUser(
             @PathVariable int userId,
             @CurrentUserId int currentUserId,
-            @RequestBody UserUpdateRequestDTO request
+            @Valid @RequestBody UserUpdateRequestDTO request
     ) {
         GetUserResponseDTO data = userService.updateUser(userId, currentUserId, request);
 
@@ -71,7 +72,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<PasswordUpdateResponseDTO>> updatePassword(
             @PathVariable int userId,
             @CurrentUserId int currentUserId,
-            @RequestBody PasswordUpdateRequestDTO request
+            @Valid @RequestBody PasswordUpdateRequestDTO request
     ) {
         PasswordUpdateResponseDTO data = userService.updatePassword(
                 userId,

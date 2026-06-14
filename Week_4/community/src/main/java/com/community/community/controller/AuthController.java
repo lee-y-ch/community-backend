@@ -8,6 +8,7 @@ import com.community.community.dto.UserResponseDTO;
 import com.community.community.entity.User;
 import com.community.community.service.AuthService;
 import com.community.community.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,7 @@ public class AuthController {
     }
 
     @PostMapping("/auth")
-    public ResponseEntity<?> login(@RequestBody LoginRequestDTO request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO request) {
         LoginResultDTO result = authService.login(request);
 
         // accessToken은 JS에서 직접 다루지 않도록 HttpOnly Cookie로 내려준다.

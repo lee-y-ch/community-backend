@@ -4,6 +4,7 @@ import com.community.community.ApiResponse;
 import com.community.community.auth.CurrentUserId;
 import com.community.community.dto.*;
 import com.community.community.service.PostService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class PostController {
             // accessToken 쿠키가 없어도 Controller에서 직접 401 응답을 만들기 위해 required = false로 받는다.
             // required = true이면 쿠키 누락 시 Spring이 먼저 400을 반환할 수 있다.
             @CurrentUserId int currentUserId,
-            @RequestBody PostCreateRequestDTO request
+            @Valid @RequestBody PostCreateRequestDTO request
     ) {
         CreatePostResponseDTO data = postService.createPost(currentUserId, request);
 
@@ -60,7 +61,7 @@ public class PostController {
     public ResponseEntity<?> updatePost(
             @PathVariable int postId,
             @CurrentUserId int currentUserId,
-            @RequestBody PostUpdateRequestDTO request
+            @Valid @RequestBody PostUpdateRequestDTO request
     ) {
         PostUpdateResponseDTO data = postService.updatePost(postId, currentUserId, request);
 

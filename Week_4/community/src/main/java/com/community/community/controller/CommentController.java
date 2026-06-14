@@ -4,6 +4,7 @@ import com.community.community.ApiResponse;
 import com.community.community.auth.CurrentUserId;
 import com.community.community.dto.*;
 import com.community.community.service.CommentService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class CommentController {
     public ResponseEntity<?> createComment(
             @PathVariable int postId,
             @CurrentUserId int currentUserId,
-            @RequestBody CommentCreateRequestDTO request
+            @Valid @RequestBody CommentCreateRequestDTO request
     ) {
         CommentCreateResponseDTO data = commentService.createComment(
                 postId,
@@ -60,7 +61,7 @@ public class CommentController {
     public ResponseEntity<?> updateComment(
             @PathVariable int commentId,
             @CurrentUserId int currentUserId,
-            @RequestBody CommentUpdateRequestDTO request
+            @Valid @RequestBody CommentUpdateRequestDTO request
     ) {
         CommentUpdateResponseDTO data = commentService.updateComment(
                 commentId,
