@@ -47,9 +47,12 @@ public class CommentService {
         Comment comment = new Comment(post, writer, request.getContent());
         Comment savedComment = commentRepository.save(comment);
 
-        post.increaseCommentCount();
+        // @Modifying(clearAutomatically = true)가 실행되면 영속성 컨텍스트가 정리될 수 있기 때문
+        Integer commentId = savedComment.getCommentId();
 
-        return new CommentCreateResponseDTO(savedComment.getCommentId());
+        postRepository.increaseCommentCount(postId);
+
+        return new CommentCreateResponseDTO(commentId);
     }
 
     public GetCommentsResponseDTO getComments(
@@ -136,9 +139,9 @@ public class CommentService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        Post post = comment.getPost();
+        Integer postId = comment.getPost().getPostId();
 
         commentRepository.delete(comment);
-        post.decreaseCommentCount();
+        postRepository.decreaseCommentCount(postId);
     }
 }

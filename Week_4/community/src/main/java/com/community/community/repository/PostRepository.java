@@ -18,4 +18,14 @@ public interface PostRepository extends JpaRepository<Post, Integer>, PostReposi
 
     @Query("SELECT p.likeCount FROM Post p WHERE p.postId = :postId")
     int findLikeCountByPostId(@Param("postId") Integer postId);
+
+    // 댓글수는 post 테이블에 종속되기 때문에, 댓글수 증감을 postRepository에 정의함.
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Post p SET p.commentCount = p.commentCount + 1 WHERE p.postId = :postId")
+    int increaseCommentCount(@Param("postId") Integer postId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Post p SET p.commentCount = p.commentCount - 1 WHERE p.postId = :postId AND p.commentCount > 0")
+    int decreaseCommentCount(@Param("postId") Integer postId);
 }
