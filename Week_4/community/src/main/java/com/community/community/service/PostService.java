@@ -12,6 +12,7 @@ import com.community.community.repository.PostRepository;
 import com.community.community.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.View;
 
 import java.util.List;
 
@@ -22,15 +23,17 @@ public class PostService {
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final PostLikeRepository postLikeRepository;
+    private final View view;
 
     public PostService(
             PostRepository postRepository,
             PostLikeRepository postLikeRepository,
-            UserRepository userRepository
-    ) {
+            UserRepository userRepository,
+            View view) {
         this.postRepository = postRepository;
         this.postLikeRepository = postLikeRepository;
         this.userRepository = userRepository;
+        this.view = view;
     }
 
     // post 작성 메서드
@@ -57,7 +60,7 @@ public class PostService {
         return new CreatePostResponseDTO(createdPost);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public GetPostResponseDTO getPost(int postId, int currentUserId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
@@ -75,6 +78,10 @@ public class PostService {
 
         boolean isAuthor = author.getUserId().equals(currentUserId);
 
+        // EventListener로 분리 검토
+        postRepository.increaseViewCount(postId);
+        int viewCount = postRepository.findViewCountByPostId(postId);
+
         PostResponseDTO postResponse = new PostResponseDTO(
                 post.getPostId(),
                 post.getTitle(),
@@ -84,7 +91,7 @@ public class PostService {
                 post.getCreatedAt().toString(),
                 post.getLikeCount(),
                 post.getCommentCount(),
-                post.getViewCount(),
+                viewCount,
                 isLiked,
                 isAuthor
         );

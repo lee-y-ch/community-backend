@@ -58,9 +58,5 @@ public class Post {
         this.content = content;
         this.imageUrl = imageUrl;
     }
-
-    public void increaseViewCount() {
-        this.viewCount++;
-    }
 }
 
