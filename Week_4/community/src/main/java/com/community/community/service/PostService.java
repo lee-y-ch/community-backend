@@ -78,7 +78,7 @@ public class PostService {
 
         boolean isAuthor = author.getUserId().equals(currentUserId);
 
-        // EventListener로 분리 검토
+        // JPQL update query는 이미 조회한 post 객체의 viewCount를 갱신하지 않으므로 최신 값을 다시 조회한다.
         postRepository.increaseViewCount(postId);
         int viewCount = postRepository.findViewCountByPostId(postId);
 
@@ -172,10 +172,10 @@ public class PostService {
         postRepository.delete(post);
     }
 
-    // post_likes 변경과 posts.like_count 변경 중 하나만 반영되는 것을 막기 위해 트랜잭션으로 묶는다.
+    // post_likes 변경과 posts.like_count 변경이 하나의 작업으로 처리되도록 트랜잭션으로 묶는다.
     @Transactional
     public PostLikeResponseDTO toggleLike(int postId, int currentUserId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdForUpdate(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         User user = userRepository.findById(currentUserId)

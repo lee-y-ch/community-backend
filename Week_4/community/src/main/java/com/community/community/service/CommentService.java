@@ -47,7 +47,7 @@ public class CommentService {
         Comment comment = new Comment(post, writer, request.getContent());
         Comment savedComment = commentRepository.save(comment);
 
-        // @Modifying(clearAutomatically = true)가 실행되면 영속성 컨텍스트가 정리될 수 있기 때문
+        // comment_count update query가 영속성 컨텍스트를 정리할 수 있으므로 응답에 필요한 ID를 먼저 확보한다.
         Integer commentId = savedComment.getCommentId();
 
         postRepository.increaseCommentCount(postId);
@@ -129,7 +129,7 @@ public class CommentService {
         return new CommentUpdateResponseDTO(commentId, request.getContent());
     }
 
-    // 댓글 삭제와 comment_count 감소 중 하나만 반영되는 것을 막기 위해 트랜잭션으로 묶는다.
+    // 댓글 삭제와 posts.comment_count 감소가 하나의 작업으로 처리되도록 트랜잭션으로 묶는다.
     @Transactional
     public void deleteComment(int commentId, int currentUserId) {
         Comment comment = commentRepository.findById(commentId)
