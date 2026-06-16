@@ -183,20 +183,22 @@ public class PostService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.POST_LIKE_NOT_FOUND));
 
             postLikeRepository.delete(postLike);
-            post.decreaseLikeCount();
+            postRepository.decreaseLikeCount(postId);
             liked = false;
         } else {
             PostLike postLike = new PostLike(post, user);
 
             postLikeRepository.save(postLike);
-            post.increaseLikeCount();
+            postRepository.increaseLikeCount(postId);
             liked = true;
         }
+
+        int likeCount = postRepository.findLikeCountByPostId(postId);
 
         return new PostLikeResponseDTO(
                 postId,
                 liked,
-                post.getLikeCount()
+                likeCount
         );
     }
 
