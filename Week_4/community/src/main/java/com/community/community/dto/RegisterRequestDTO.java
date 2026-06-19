@@ -1,18 +1,27 @@
 package com.community.community.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
-// 회원가입 요청 body를 Java 객체로 받기 위한 DTO
 @Getter @Setter
 public class RegisterRequestDTO {
 
+    @NotBlank(message = "invalid_register_request")
+    @Email(message = "invalid_register_request")
     private String email;
+
+    @NotBlank(message = "invalid_register_request")
     private String password;
+
+    @NotBlank(message = "invalid_register_request")
+    @Size(max = 10, message = "invalid_register_request")
     private String nickname;
 
-    // JSON의 profile_image를 Java의 profileImage 필드와 매핑한다.
     @JsonProperty("profile_image_url")
+    @NotBlank(message = "invalid_register_request")
     private String profileImageUrl;
 }

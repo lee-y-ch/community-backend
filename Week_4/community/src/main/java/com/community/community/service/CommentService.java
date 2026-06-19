@@ -4,6 +4,8 @@ import com.community.community.dto.*;
 import com.community.community.entity.Comment;
 import com.community.community.entity.Post;
 import com.community.community.entity.User;
+import com.community.community.exception.BusinessException;
+import com.community.community.exception.ErrorCode;
 import com.community.community.repository.CommentRepository;
 import com.community.community.repository.PostRepository;
 import com.community.community.repository.UserRepository;
@@ -36,22 +38,21 @@ public class CommentService {
             int currentUserId,
             CommentCreateRequestDTO request
     ) {
-        if (request.getContent() == null || request.getContent().isBlank()) {
-            throw new IllegalArgumentException("invalid_create_comment_request");
-        }
-
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalStateException("post_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         User writer = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new SecurityException("unauthorized"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
         Comment comment = new Comment(post, writer, request.getContent());
         Comment savedComment = commentRepository.save(comment);
 
-        post.increaseCommentCount();
+        // comment_count update query가 영속성 컨텍스트를 정리할 수 있으므로 응답에 필요한 ID를 먼저 확보한다.
+        Integer commentId = savedComment.getCommentId();
 
-        return new CommentCreateResponseDTO(savedComment.getCommentId());
+        postRepository.increaseCommentCount(postId);
+
+        return new CommentCreateResponseDTO(commentId);
     }
 
     public GetCommentsResponseDTO getComments(
@@ -67,11 +68,11 @@ public class CommentService {
             cursor = Integer.parseInt(cursorValue);
             size = Integer.parseInt(sizeValue);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("invalid_comments_request");
+            throw new BusinessException(ErrorCode.INVALID_COMMENTS_REQUEST);
         }
 
         if (cursor < 0 || size <= 0) {
-            throw new IllegalArgumentException("invalid_comments_request");
+            throw new BusinessException(ErrorCode.INVALID_COMMENTS_REQUEST);
         }
 
         /*
@@ -80,7 +81,7 @@ public class CommentService {
          * 게시글이 없다면 댓글 목록도 조회할 수 없으므로 post_not_found를 반환한다.
          */
         if (!postRepository.existsById(postId)) {
-            throw new IllegalStateException("post_not_found");
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
         /*
@@ -116,16 +117,11 @@ public class CommentService {
             int currentUserId,
             CommentUpdateRequestDTO request
     ) {
-        // 댓글 내용은 필수이므로 공백만 입력한 경우도 저장하지 않는다.
-        if (request.getContent() == null || request.getContent().isBlank()) {
-            throw new IllegalArgumentException("invalid_update_comment_request");
-        }
-
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalStateException("comment_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.isWrittenBy(currentUserId)) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         comment.updateContent(request.getContent());
@@ -133,19 +129,19 @@ public class CommentService {
         return new CommentUpdateResponseDTO(commentId, request.getContent());
     }
 
-    // 댓글 삭제와 comment_count 감소 중 하나만 반영되는 것을 막기 위해 트랜잭션으로 묶는다.
+    // 댓글 삭제와 posts.comment_count 감소가 하나의 작업으로 처리되도록 트랜잭션으로 묶는다.
     @Transactional
     public void deleteComment(int commentId, int currentUserId) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalStateException("comment_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.isWrittenBy(currentUserId)) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        Post post = comment.getPost();
+        Integer postId = comment.getPost().getPostId();
 
         commentRepository.delete(comment);
-        post.decreaseCommentCount();
+        postRepository.decreaseCommentCount(postId);
     }
 }

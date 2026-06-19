@@ -2,7 +2,10 @@ package com.community.community.service;
 
 import com.community.community.dto.*;
 import com.community.community.entity.User;
+import com.community.community.exception.BusinessException;
+import com.community.community.exception.ErrorCode;
 import com.community.community.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,9 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // 회원가입 처리 로직
@@ -24,29 +30,22 @@ public class UserService {
 
         // 각 에러 처리에 대한 응답 코드 매핑은 UserController에서 진행
 
-        // 필수값 검사 (400)
-        if (email == null || email.isBlank()
-                || password == null || password.isBlank()
-                || nickname == null || nickname.isBlank()
-                || profileImage == null || profileImage.isBlank()) {
-
-            // IllegalArgumentException: 잘못된 인자에 대한 에러 처리
-            throw new IllegalArgumentException("invalid_register_request");
-        }
-
         // email 중복 검증 (409)
         if (userRepository.existsByEmail(email)) {
             // IllegalStateException: 형식은 올바르나 상태가 올바르지 않은 상황에 대한 에러 처리
-            throw new IllegalStateException("email_already_exists");
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         // nickname 중복 검증 (409)
         if (userRepository.existsByNickname(nickname)) {
-            throw new IllegalStateException("nickname_already_exists");
+            throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
         }
 
+        // 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(password);
+
         // 저장 로직
-        User user = new User(email, password, nickname, profileImage);
+        User user = new User(email, encodedPassword, nickname, profileImage);
         userRepository.save(user);
     }
 
@@ -55,14 +54,14 @@ public class UserService {
 
         // URL 경로의 userId와 JWT에서 추출한 현재 userId가 일치하는지 확인한다. (403)
         if (pathUserId != currentUserId) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         // findById()는 조회 결과가 없을 수 있기 때문에 Optional<User>를 반환한다.
         // 값이 있으면 User를 그대로 반환하고,
         // 값이 없으면 orElseThrow() 안의 예외를 생성해서 user_not_found로 처리한다.
         return userRepository.findById(pathUserId)
-                .orElseThrow(() -> new IllegalStateException("user_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     // @Transactional로 설정해서, userRepository.save(user)를 다시 호출하지 않아도 됨.
@@ -70,22 +69,14 @@ public class UserService {
     @Transactional
     public GetUserResponseDTO updateUser(int pathUserId, int currentUserId, UserUpdateRequestDTO request) {
         if (pathUserId != currentUserId) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         User user = userRepository.findById(pathUserId)
-                .orElseThrow(() -> new IllegalStateException("user_not_found"));
-
-        if (request.getNickname() == null || request.getNickname().isBlank()) {
-            throw new IllegalArgumentException("invalid_update_user_request");
-        }
-
-        if (request.getNickname().length() > 10) {
-            throw new IllegalArgumentException("invalid_update_user_request");
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (userRepository.existsByNicknameAndUserIdNot(request.getNickname(), pathUserId)) {
-            throw new IllegalStateException("nickname_already_exists");
+            throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
         }
 
         user.updateProfile(request.getNickname(), request.getProfileImageUrl());
@@ -107,26 +98,17 @@ public class UserService {
             PasswordUpdateRequestDTO request
     ) {
         if (pathUserId != currentUserId) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         User user = userRepository.findById(pathUserId)
-                .orElseThrow(() -> new IllegalStateException("user_not_found"));
-
-        if (request.getPassword() == null || request.getPassword().isBlank()
-                || request.getPasswordConfirm() == null || request.getPasswordConfirm().isBlank()) {
-            throw new IllegalArgumentException("invalid_update_password_request");
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
-            throw new IllegalArgumentException("invalid_update_password_request");
+            throw new BusinessException(ErrorCode.INVALID_UPDATE_PASSWORD_REQUEST);
         }
 
-        if (!isValidPassword(request.getPassword())) {
-            throw new IllegalArgumentException("invalid_update_password_request");
-        }
-
-        user.updatePassword(request.getPassword());
+        user.updatePassword(passwordEncoder.encode(request.getPassword()));
 
         return new PasswordUpdateResponseDTO(pathUserId);
     }
@@ -160,11 +142,11 @@ public class UserService {
 
     public void deleteUser(int pathUserId, int currentUserId) {
         if (pathUserId != currentUserId) {
-            throw new SecurityException("forbidden");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         User user = userRepository.findById(pathUserId)
-                .orElseThrow(() -> new IllegalStateException("user_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         userRepository.delete(user);
     }
@@ -172,22 +154,22 @@ public class UserService {
     @Transactional(readOnly = true)
     public void checkNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
-            throw new IllegalArgumentException("invalid_nickname_check_request");
+            throw new BusinessException(ErrorCode.INVALID_NICKNAME_CHECK_REQUEST);
         }
 
         if (userRepository.existsByNickname(nickname)) {
-            throw new IllegalStateException("duplicate_nickname");
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
     }
 
     @Transactional(readOnly = true)
     public void checkEmail(String email) {
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("invalid_email_check_request");
+            throw new BusinessException(ErrorCode.INVALID_EMAIL_CHECK_REQUEST);
         }
 
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalStateException("duplicate_email");
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
     }
 
