@@ -12,6 +12,7 @@ import com.community.community.repository.PostRepository;
 import com.community.community.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.View;
 
 import java.util.List;
 
@@ -22,15 +23,17 @@ public class PostService {
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final PostLikeRepository postLikeRepository;
+    private final View view;
 
     public PostService(
             PostRepository postRepository,
             PostLikeRepository postLikeRepository,
-            UserRepository userRepository
-    ) {
+            UserRepository userRepository,
+            View view) {
         this.postRepository = postRepository;
         this.postLikeRepository = postLikeRepository;
         this.userRepository = userRepository;
+        this.view = view;
     }
 
     // post 작성 메서드
@@ -57,7 +60,7 @@ public class PostService {
         return new CreatePostResponseDTO(createdPost);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public GetPostResponseDTO getPost(int postId, int currentUserId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
@@ -75,6 +78,10 @@ public class PostService {
 
         boolean isAuthor = author.getUserId().equals(currentUserId);
 
+        // JPQL update query는 이미 조회한 post 객체의 viewCount를 갱신하지 않으므로 최신 값을 다시 조회한다.
+        postRepository.increaseViewCount(postId);
+        int viewCount = postRepository.findViewCountByPostId(postId);
+
         PostResponseDTO postResponse = new PostResponseDTO(
                 post.getPostId(),
                 post.getTitle(),
@@ -84,7 +91,7 @@ public class PostService {
                 post.getCreatedAt().toString(),
                 post.getLikeCount(),
                 post.getCommentCount(),
-                post.getViewCount(),
+                viewCount,
                 isLiked,
                 isAuthor
         );
@@ -165,10 +172,10 @@ public class PostService {
         postRepository.delete(post);
     }
 
-    // post_likes 변경과 posts.like_count 변경 중 하나만 반영되는 것을 막기 위해 트랜잭션으로 묶는다.
+    // post_likes 변경과 posts.like_count 변경이 하나의 작업으로 처리되도록 트랜잭션으로 묶는다.
     @Transactional
     public PostLikeResponseDTO toggleLike(int postId, int currentUserId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdForUpdate(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         User user = userRepository.findById(currentUserId)
@@ -183,20 +190,22 @@ public class PostService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.POST_LIKE_NOT_FOUND));
 
             postLikeRepository.delete(postLike);
-            post.decreaseLikeCount();
+            postRepository.decreaseLikeCount(postId);
             liked = false;
         } else {
             PostLike postLike = new PostLike(post, user);
 
             postLikeRepository.save(postLike);
-            post.increaseLikeCount();
+            postRepository.increaseLikeCount(postId);
             liked = true;
         }
+
+        int likeCount = postRepository.findLikeCountByPostId(postId);
 
         return new PostLikeResponseDTO(
                 postId,
                 liked,
-                post.getLikeCount()
+                likeCount
         );
     }
 
