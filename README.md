@@ -1,14 +1,26 @@
 # LEO PHOTO
 
-사진과 이야기를 게시글로 공유하는 커뮤니티 서비스입니다.
-이 저장소는 LEO PHOTO의 Spring Boot 백엔드 애플리케이션을 관리합니다.
+**사진과 그때의 이야기를 나누는 커뮤니티**
 
-- 서비스: [LEO PHOTO 바로가기](https://leo-community.xyz)
-- 시연 영상: [Google Drive](https://drive.google.com/file/d/1HAiR3l3Hz_b8c-B4qi4QNPXCV0CGdwpV/view?usp=sharing)
-- 프론트엔드: [4-leo-community-FE](https://github.com/100-hours-a-week/4-leo-community-FE)
-- 인프라: [community-infra](https://github.com/lee-y-ch/community-infra)
+사진을 올리고 그때의 이야기를 글로 남기며, 다른 사람의 사진을 찾아보고 댓글로 대화하는 서비스입니다. 일상의 장면을 기록하고 사진을 통해 서로의 경험을 나눌 수 있도록 만들었습니다.
+
+[서비스 주소](https://leo-community.xyz) / [시연 영상](https://drive.google.com/file/d/1HAiR3l3Hz_b8c-B4qi4QNPXCV0CGdwpV/view?usp=sharing) / [Frontend](https://github.com/100-hours-a-week/4-leo-community-FE) / [인프라](https://github.com/lee-y-ch/community-infra)
+
+![LEO PHOTO 게시글 목록과 검색 화면](docs/screenshots/service-demo.png)
+
+*시연 영상의 게시글 목록 화면입니다.*
 
 ## 주요 기능
+
+- **사진과 글 공유** — 사진을 첨부해 게시글을 작성하고 수정
+- **게시글 탐색과 검색** — 목록을 둘러보고 최신순 또는 정확도순으로 검색
+- **댓글과 좋아요** — 다른 사람의 사진에 반응하고 이야기 나누기
+- **내 프로필 관리** — 프로필 사진과 회원정보 변경
+
+이 저장소는 LEO PHOTO의 Spring Boot 백엔드 애플리케이션을 관리합니다.
+
+<details>
+<summary>기능별 상세 보기</summary>
 
 ### 회원
 
@@ -37,6 +49,8 @@
 - 브라우저에서 S3로 원본 이미지 직접 업로드
 - Lambda를 통한 WebP 변환
 - CloudFront 이미지 제공
+
+</details>
 
 ## 아키텍처
 
